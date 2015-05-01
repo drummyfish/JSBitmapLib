@@ -1,12 +1,4 @@
 /**
- *  Creates a new Image.
- *  @class
- *
- *  @param width image width in pixels
- *  @param height image height in pixels
- */
-
-/**
  * Wraps given value into interval <0,maximum>.
  * @private
  *
@@ -31,6 +23,14 @@ function wrap(value, maximum)
   
     return value;
   }
+ 
+/**
+ *  Creates a new Image.
+ *  @class
+ *
+ *  @param width image width in pixels
+ *  @param height image height in pixels
+ */
  
 function Image(width, height)
   { 
@@ -292,7 +292,28 @@ function Image(width, height)
 		    }
 	      );
 	  }
-			
+		
+	/**
+	 *  Translates the image by given offset.
+	 *
+	 *  @param horizontal horizontal offset in pixels (can be negative)
+	 *  @param vertical vertical offset in pixels (can be negative)
+	 */
+	 
+    this.translate = function(horizontal, vertical)
+	  {
+	  }
+	  
+	/**
+	 *  Creates a deep copy of the image.
+	 *
+	 *  @return new image that contains the same data as this image
+	 */
+	 
+	this.copy = function()
+	  {
+	  }
+		
 	// init the image:
 			
 	this.imageData = new Array(width);
