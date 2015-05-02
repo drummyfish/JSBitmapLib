@@ -455,6 +455,53 @@ function Image(width, height)
 		
 		return newImage;
 	  }
+
+	/**
+	 *  Generates white noise into the image.
+	 */
+	 
+	this.generateWhiteNoise = function()
+	  {
+	    this.forEachPixel
+		  (
+		    function (x, y, r, g, b)
+			  {
+				return [Math.floor(Math.random() * 256),Math.floor(Math.random() * 256),Math.floor(Math.random() * 256)];
+			  }
+		  );
+	  }
+	  
+	/**
+	 * Converts the image to grayscale.
+	 */
+	 
+	this.toGrayscale = function()
+	  {
+	    this.forEachPixel
+		  (
+		    function (x, y, r, g, b)
+			  {
+				var value = Math.round(0.2126 * r) + Math.round(0.7152 * g) + Math.round(0.0722 * b);
+				return [value,value,value];
+			  }
+		  );		
+	  }
+	  
+	this.dft = function()
+	  {  
+	  }
+	  
+	this.idft = function()
+	  {  
+	  }
+	  
+	this.dct = function()
+	  {	  
+	  }
+	  
+	this.idct = function()
+	  {
+	  }
 		
 	// init the image:
 			
