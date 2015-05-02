@@ -23,7 +23,22 @@ function wrap(value, maximum)
   
     return value;
   }
- 
+
+/**
+ *  Loads images from given set of input elements.
+ *
+ *  @param inputs array of input elements, their images must be
+ *    already set (inputs without selected images will return null)
+ *  @param completedCallback a function that will be called once
+ *    all images have been loaded, it should take one parameter
+ *    that will contain an array of images that have been loaded
+ */
+  
+function loadImagesFromInputs(inputs, completedCallback)
+  {
+	  
+  }
+  
 /**
  *  Creates a new Image.
  *  @class
@@ -51,6 +66,109 @@ function Image(width, height)
     this.OVERFLOW_BEHAVIOR_SATURATE = 10;
 	/** If a pixel is set to a value wxceeding minimum/maximum value, wrapping is used (modulo, e.g. 257 => 1). */
     this.OVERFLOW_BEHAVIOR_WRAP = 11;
+	
+	/**
+	 *  Sets the image size to given value. Old content is
+     *  either cropped or extended according to current border
+	 *  behavior.
+	 *
+	 *  @param width new image width in pixels
+	 *  @param height new image height in pixels
+	 */
+	
+	this.setSize = function(width, height)
+	  {
+		var newArray = new Array(width);
+		  
+	    for (var i = 0; i < width; i++)
+	      {
+	        newArray[i] = new Array(height);
+		  
+	        for (var j = 0; j < height; j++)
+		      newArray[i][j] = new Array(3);  // rgb
+	      }
+		  
+		// copy the data to the new array:
+		  
+		for (var j = 0; j < height; j++)
+	      for (var i = 0; i < width; i++)
+		    {
+			  var color = this.getPixel(i,j);
+				
+			  newArray[i][j][0] = color[0];
+			  newArray[i][j][1] = color[1];
+			  newArray[i][j][2] = color[2];
+			}
+			
+		this.imageData = newArray;
+	  }
+	
+	/**
+	 *  Loads the image from input element of HTML5 File API.
+	 *  This allows for client local images to be loaded. The loading
+	 *  happens asynchronously.
+	 *
+	 *  @param input input element that must have the image
+	 *    file selected (otherwise nothing happens)
+	 *  @param completedCallback a function that will be run
+	 *    once the loading has been completed
+	 */
+	
+	this.loadFromInput = function(input, completedCallback)
+	  {
+        var file = input.files[0];		
+		var reader = new FileReader();
+		var selfReference = this;
+		
+		if (file)    // if file is selected
+		  {
+		    var imageElement = document.createElement("img");
+	    
+		    reader.onload = 
+		      (
+		        function(image)
+			      {
+			        return function(event)
+				     { 
+					   image.src = event.target.result;
+					   
+			           var width = image.width;
+			           var height = image.height;
+					   
+					   selfReference.setSize(width,height);
+
+					   var canvas = document.createElement("canvas");
+					   canvas.width = width + 1;
+					   canvas.height = height + 1;
+		               var context = canvas.getContext("2d");
+		               context.drawImage(image,0,0);
+			
+			           var imageData = context.getImageData(0,0,width,height);
+			
+			           var column = 0;
+					   var row = 0;
+					   
+			           for (var i = 0; i < imageData.data.length; i+= 4)  // rgba
+					     {
+						   selfReference.setPixel(column,row,imageData.data[i],imageData.data[i + 1],imageData.data[i + 2]);
+							
+						   column += 1;
+						   
+						   if (column >= width)
+						     {
+							   column = 0;
+							   row += 1;
+							 }
+						 }
+						 
+					   completedCallback();
+				     };
+			      }  
+		      )(imageElement);
+		
+		    reader.readAsDataURL(file);
+		  }  
+	  }
 	
 	/**
 	 *  Applies the current overflow behavior to given value.
@@ -257,24 +375,37 @@ function Image(width, height)
 	 */
 			
     this.drawToCanvas = function(canvas)
-	  {
+	  { 
 	    var context = canvas.getContext("2d");
-		var id = context.createImageData(1,1);
+		var id = context.createImageData(this.getWidth(),this.getHeight());
         var data  = id.data;                        
-                
-		for (var i = 0; i < this.getWidth(); i++)
-		  for (var j = 0; j < this.getHeight(); j++)
+        
+		var position = 0;
+				
+		for (var j = 0; j < this.getHeight(); j++)
+		  for (var i = 0; i < this.getWidth(); i++)
 		    {
 		      var color = this.getPixel(i,j);
-			  data[0]   = color[0];
-              data[1]   = color[1];
-              data[2]   = color[2];
-              data[3]   = 255;      // alpha
-				  
-			  context.putImageData(id,i,j);
-		    }
-	  }
+			  data[position]     = color[0];
+              data[position + 1] = color[1];
+              data[position + 2] = color[2];
+              data[position + 3] = 255;      // alpha
+		    
+			  position += 4;
+			}
 			
+		context.putImageData(id,0,0);
+	  }
+		
+    /**
+	 *  Inverts the image colors.
+	 */
+		
+    this.invert = function()
+	  {
+		this.forEachPixel(function(x, y, r, g, b) {return [255 - r, 255 - g, 255 - b]});
+	  }
+		
 	/**
 	 *  Fills the whole image with given color.
 	 *
@@ -312,6 +443,17 @@ function Image(width, height)
 	 
 	this.copy = function()
 	  {
+	    var newImage = new Image(this.getWidth(),this.getHeight());	
+	    var reference = this;
+		
+		copyFunction = function(x, y, r, g, b)
+		  {
+			return reference.getPixel(x,y);
+		  };
+		
+		newImage.forEachPixel(copyFunction);
+		
+		return newImage;
 	  }
 		
 	// init the image:
