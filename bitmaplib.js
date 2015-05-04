@@ -64,6 +64,148 @@ function loadImagesFromInputs(inputs, completedCallback)
   }
   
 /**
+ *  Creates a new matrix. Matrices can be used for image transformations.
+ *  @class
+ *
+ *  @param width matrix width
+ *  @param height matrix height
+ */
+  
+function Matrix(width, height)
+  {  
+    this.getWidth = function()
+	  {
+		return this.data.length;
+	  }
+	  
+	this.getHeight = function()
+	  {
+		return this.data[0].length;
+	  }
+  
+    this.getValue = function(x, y)
+	  {  
+	    if (x < 0 || x >= this.getWidth() || y < 0 || y >= this.getHeight())
+	      return 0;
+	  
+	    x = Math.round(x);
+	    y = Math.round(y);
+	  
+	    return this.data[x][y];
+	  }
+	
+	this.setValue = function(x, y, value)
+	  {
+		if (x < 0 || x >= this.getWidth() || y < 0 || y >= this.getHeight())
+	      return;
+	  
+	    x = Math.round(x);
+	    y = Math.round(y);
+      
+	    this.data[x][y] = value;
+	  }
+	  
+	/**
+	 *  Sets matrix values from given (1D) array. The array will be
+	 *  traversed from left and its values will be set to matrix which
+	 *  will be traversed from top left by lines.
+	 *
+	 *  @param values array of values
+	 */
+	  
+	this.setValues = function(values)
+	  {
+		var position = 0;
+		
+		for (var j = 0; j < this.getHeight(); j++)
+		  for (var i = 0; i < this.getWidth(); i++)
+		    {
+			  if (position >= values.length)
+				return;
+				
+			  this.setValue(i,j,values[position]);
+				
+			  position++;
+			}
+	  }
+	  
+	/**
+	 *  Multiplies the matrix with another matrix.
+	 *
+	 *  @param matrix matrix to multiply this matrix with
+	 *  @return result of multiplication, i.e. a matrix or null
+	 *     if the matrices cannot be multiplied
+	 */
+	  
+	this.multiply = function(matrix)
+	  {
+		if (this.getWidth() != matrix.getHeight())   
+		  return null;          // can't multiply
+		  
+		var result = new Matrix(this.getWidth(),this.getHeight());
+		
+		for (var j = 0; j < result.getHeight(); j++)
+		  for (var i = 0; i < result.getWidth(); i++)
+		    {
+			  var value = 0;
+			  
+			  for (var k = 0; k < this.getWidth() ; k++)
+				value += this.getValue(k,j) * matrix.getValue(i,k);
+			
+			  result.setValue(i,j,value);
+		    }
+		
+		return result;
+	  }
+	  
+	/**
+	 *  Makes a transposed matrix.
+	 *
+	 *  @return transposed matrix
+	 */
+	  
+	this.transposed = function()
+	  {
+		var result = new Matrix(this.getHeight(),this.getWidth());  
+	  
+	    for (var j = 0; j < result.getHeight(); j++)
+		  for (var i = 0; i < result.getWidth(); i++)
+		    result.setValue(i,j,this.getValue(j,i));
+	    
+		return result;
+	  }
+	  
+	this.toString = function()
+	  {
+		var result = "";
+		  
+		for (var j = 0; j < this.getHeight(); j++)
+		  {  
+	        for (var i = 0; i < this.getWidth(); i++)
+			  {
+		        result += this.getValue(i,j).toString() + " ";	
+		      }
+		
+		    result += "\n";
+		  }
+		  
+		return result;
+	  }
+	
+	// init the matrix:
+  
+	this.data = new Array(width);
+		  
+	for (var i = 0; i < width; i++)
+	  {
+	    this.data[i] = new Array(height);
+			  
+	    for (var j = 0; j < height; j++)
+		  this.data[i][j] = 0;
+	  }
+  }
+  
+/**
  *  Creates a new Image.
  *  @class
  *
@@ -91,10 +233,21 @@ function Image(width, height)
 	/** If a pixel is set to a value wxceeding minimum/maximum value, wrapping is used (modulo, e.g. 257 => 1). */
     this.OVERFLOW_BEHAVIOR_WRAP = 11;
 	
+	/** interpolation by nearest neighbour */
 	this.INTERPOLATION_METHOD_CLOSEST = 20;
+	/** bilinear interpolation */
 	this.INTERPOLATION_METHOD_BILINEAR = 21;
+	/** bicubic interpolation */
 	this.INTERPOLATION_METHOD_BICUBIC = 22;
+	/** sine interpolation */
 	this.INTERPOLATION_METHOD_SINE = 23;
+	
+	/** derivative by x axis */
+	this.DERIVATIVE_TYPE_X = 30;
+	/** derivative by y axis */
+	this.DERIVATIVE_TYPE_Y = 31;
+	/** derivative by x and y axis */
+	this.DERIVATIVE_TYPE_XY = 32;
 	
 	/**
 	 *  Sets the image size to given value. Old content is
@@ -144,7 +297,7 @@ function Image(width, height)
 	    var oldImage = this.copy();
 		
 		this.setSize(width,height);
-		
+	
 		this.forEachPixel
 		  (
 		    function (x, y, r, g, b)
@@ -153,7 +306,7 @@ function Image(width, height)
 			    y = (y / (height - 1)) * (oldImage.getHeight() - 1);
 			    return oldImage.getPixel(x,y);
 			  }
-		  );
+		  );	
 	  }
 	
 	/**
@@ -321,6 +474,17 @@ function Image(width, height)
 	  {
 		this.borderBehavior = behavior;
 	  }
+
+	/**
+	 *  Gets the current border behavior.
+	 *
+	 *  @return current border behavior
+	 */
+	  
+	this.getBorderBehavior = function()
+	  {
+		return this.borderBehavior;
+	  }
 	  
 	/**
 	 *  Sets the interpolation method, i.e. how the values will
@@ -336,6 +500,18 @@ function Image(width, height)
 	  }
 	  
 	/**
+	 *  Gets the current interpolation method of the image.
+	 *
+	 *  @return current interpolation method, see the class constants
+	 *    starting with INTERPOLATION_METHOD_
+	 */
+	  
+	this.getInterpolationMethod = function(method)
+	  {
+		return this.interpolationMethod;
+	  }
+	  
+	/**
 	 *  Sets the overflow behavior for the image, i.e. the rules
      *  that say how a pixel value should be converted to the
 	 *  minimum/maximum	range if it exceeds it.
@@ -347,6 +523,17 @@ function Image(width, height)
 	this.setOverflowBehavior = function(behavior)
 	  {
 		this.overflowBehavior = behavior;
+	  }
+	
+	/**
+	 *  Gets the current border behavior.
+	 *
+	 *  @return current border behavior
+	 */
+	
+	this.getOverflowBehavior = function()
+	  {
+		return this.overflowBehavior;
 	  }
 	
     /**
@@ -382,9 +569,11 @@ function Image(width, height)
 	 */
 			
 	this.getPixel = function(x, y)
-	  {
+	  { 
 		if (x % 1 != 0 || y % 1 != 0)       // non-integer coordinates => sample
-		  return this.samplePixel(x, y);
+		  {
+		    return this.samplePixel(x, y);
+		  }
 		  
 		x = this.applyBorderBehavior(x,this.getWidth() - 1);
 		y = this.applyBorderBehavior(y,this.getHeight() - 1);
@@ -412,7 +601,7 @@ function Image(width, height)
 	
 	this.samplePixel = function(x, y)
 	  {
-		switch (this.interpolationMethod)
+		switch (this.getInterpolationMethod())
 		  {
 			default:
 			case this.INTERPOLATION_METHOD_CLOSEST:
@@ -442,11 +631,141 @@ function Image(width, height)
 			  
 			  return c1;
 			  break;
+			  
+			case this.INTERPOLATION_METHOD_BICUBIC:
+			  var result = [0,0,0];
+			
+	          var x0 = Math.floor(x);
+			  var x1 = Math.ceil(x);
+			  var xRatio = x - x0;
+			  var y0 = Math.floor(y);
+			  var y1 = Math.ceil(y);
+			  var yRatio = y - y0;
+              
+			  var c1 = this.getPixel(x0,y0);
+			  var c2 = this.getPixel(x1,y0);
+			  var c3 = this.getPixel(x0,y1);
+			  var c4 = this.getPixel(x1,y1);
+			  
+			  var dx1 = this.getDerivative(x0,y0,this.DERIVATIVE_TYPE_X);
+			  var dx2 = this.getDerivative(x1,y0,this.DERIVATIVE_TYPE_X);
+			  var dx3 = this.getDerivative(x0,y1,this.DERIVATIVE_TYPE_X);
+			  var dx4 = this.getDerivative(x1,y1,this.DERIVATIVE_TYPE_X);
+			  
+			  var dy1 = this.getDerivative(x0,y0,this.DERIVATIVE_TYPE_Y);
+			  var dy2 = this.getDerivative(x1,y0,this.DERIVATIVE_TYPE_Y);
+			  var dy3 = this.getDerivative(x0,y1,this.DERIVATIVE_TYPE_Y);
+			  var dy4 = this.getDerivative(x1,y1,this.DERIVATIVE_TYPE_Y);
+			  
+			  var dxy1 = this.getDerivative(x0,y0,this.DERIVATIVE_TYPE_XY);
+			  var dxy2 = this.getDerivative(x1,y0,this.DERIVATIVE_TYPE_XY);
+			  var dxy3 = this.getDerivative(x0,y1,this.DERIVATIVE_TYPE_XY);
+			  var dxy4 = this.getDerivative(x1,y1,this.DERIVATIVE_TYPE_XY);
+			  
+			  var matrix = new Matrix(4,4);
+			  var matrix1 = new Matrix(4,4);
+			  var matrix2 = new Matrix(4,4);
+			  
+			  matrix1.setValues(
+			    1,  0,  0, 0,
+				0,  0,  1, 0,
+				-3, 3, -2, 1,
+				2, -2,  1, 1
+				);
+				
+			  matrix2.setValues(
+			    1, 0, -3, 2,
+				0, 0, 3, -2,
+				0, 1, -2, 1,
+				0, 0, 1,  1
+				);
+			  
+			  for (var component = 0; component < 3; component++)
+			    {
+				  matrix.setValues(
+				    c1[component],  c3[component],  dy1[component],  dy3[component], 
+                    c2[component],  c4[component],  dy2[component],  dy4[component],				
+				    dx1[component], dx3[component], dxy1[component], dxy3[component],
+				    dx2[component], dx4[component], dxy2[component], dxy4[component]
+				    );
+					
+				  var coefficients = matrix1.multiply(matrix);
+				  coefficients = coefficients.multiply(matrix2);
+					
+				  for (var j = 0; j < 3; j++)
+				    for (var i = 0; i < 3; i++)
+				      {
+					    result[component] += coefficients.getValue(i,j) * Math.pow(xRatio,i) * Math.pow(yRatio,j);
+				      }
+					  
+				  result[component] = Math.round(result[component]);
+				}
+			  
+			  return result;
+			  
+			  break;
 		  }
 		  
 		return [0,0,0];
 	  }
-	
+
+	/**
+	 *  Gets the image derivative in given point computed from their
+	 *  neighbour pixels.
+	 *
+	 *  @param x x coordinate
+	 *  @param y y coordinate
+	 *  @param type derivative type, see class constants starting with
+	 *    DERIVATIVE_TYPE_
+	 *  @return three-component array representing derivatives
+	 *    for each RGB component
+	 */
+	  
+    this.getDerivative = function(x, y, type)
+	  {
+	    var result = [0,0,0]
+		var c1;
+		var c2;
+		var c3;
+		var c4;
+		
+		switch (type)
+		  {
+			default:
+			case this.DERIVATIVE_TYPE_X:
+			  c1 = this.getPixel(x + 1,y);
+			  c2 = this.getPixel(x - 1,y);
+			  break;
+			 
+			case this.DERIVATIVE_TYPE_Y:
+			  c1 = this.getPixel(x,y + 1);
+			  c2 = this.getPixel(x,y - 1);
+			  break;  
+			  
+			case this.DERIVATIVE_TYPE_XY:
+			  c1 = this.getPixel(x + 1,y + 1);
+			  c2 = this.getPixel(x - 1,y + 1);
+			  c3 = this.getPixel(x + 1,y - 1);
+			  c4 = this.getPixel(x - 1,y - 1);
+			  break;
+		  }
+		
+		for (component = 0; component < 3; component++)
+		  {
+			if (type == this.DERIVATIVE_TYPE_XY)
+			  {
+				var value1 = (c1[component] - c2[component]) / 2.0;
+			    var value2 = (c3[component] - c4[component]) / 2.0;
+			  
+			    result[component] = (value1 - value2) /  2.0;
+			  }  
+		    else
+		      result[component] = (c1[component] - c2[component]) / 2.0;
+		  }  
+	    
+		return result;
+	  }
+	  
     /**
 	 *  Sets a pixel at given position to given RGB value.
 	 *
@@ -474,9 +793,9 @@ function Image(width, height)
 	 *  Performs given operation represented by a function
 	 *  on every image pixel.
 	 *
-	 *  @param functionToApply function to be applied,
-	 *         its parameters must be x, y, r, g, b and it
-	 *         must return an array of RGB components
+	 *  @param functionToApply function to be applied, the function must
+	 *    return three-component of RGB components, parameters passed to
+	 *    it will be: x, y, red, green, blue, imageReference
 	 */
 			
 	this.forEachPixel = function(functionToApply)
@@ -485,7 +804,7 @@ function Image(width, height)
 		  for (var j = 0; j < this.getHeight(); j++)
 		    {
 		      var color = this.getPixel(i,j);
-			  color = functionToApply(i,j,color[0],color[1],color[2]);
+			  color = functionToApply(i,j,color[0],color[1],color[2],this);
 			  
 			  this.setPixel(i,j,color[0],color[1],color[2]);
 		    }
@@ -561,13 +880,18 @@ function Image(width, height)
 	/**
 	 *  Creates a deep copy of the image.
 	 *
-	 *  @return new image that contains the same data as this image
+	 *  @return new image that contains the same data and attributes as
+	 *    this image
 	 */
 	 
 	this.copy = function()
 	  {
 	    var newImage = new Image(this.getWidth(),this.getHeight());	
 	    var reference = this;
+		
+		newImage.setInterpolationMethod(this.getInterpolationMethod());
+		newImage.setBorderBehavior(this.getBorderBehavior());
+		newImage.setOverflowBehavior(this.getOverflowBehavior());
 		
 		copyFunction = function(x, y, r, g, b)
 		  {
@@ -608,6 +932,16 @@ function Image(width, height)
 				return [value,value,value];
 			  }
 		  );		
+	  }
+	  
+	this.dilate = function()
+	  {
+		  
+	  }
+	  
+	this.erode = function()
+	  {
+		  
 	  }
 	  
 	/**
