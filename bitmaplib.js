@@ -36,7 +36,31 @@ function wrap(value, maximum)
   
 function loadImagesFromInputs(inputs, completedCallback)
   {
+    var counter = inputs.length;    // counts how many images have already been loaded
+    var result = new Array();
+  
+    var checkImages = function()
+	  {
+		counter--;
+		
+		if (counter == 0)
+		  completedCallback();
+	  };
+  
+    for (var i = 0; i < inputs.length; i++)
+	  {
+		var image = new Image(1,1);
+		
+		result.push(image);
+		
+		if (!image.loadFromInput(inputs[i],checkImages))
+		  {
+			result[result.length - 1] = null;
+		    counter--;
+		  }
+	  }
 	  
+	return result;
   }
   
 /**
@@ -66,6 +90,11 @@ function Image(width, height)
     this.OVERFLOW_BEHAVIOR_SATURATE = 10;
 	/** If a pixel is set to a value wxceeding minimum/maximum value, wrapping is used (modulo, e.g. 257 => 1). */
     this.OVERFLOW_BEHAVIOR_WRAP = 11;
+	
+	this.INTERPOLATION_METHOD_CLOSEST = 20;
+	this.INTERPOLATION_METHOD_BILINEAR = 21;
+	this.INTERPOLATION_METHOD_BICUBIC = 22;
+	this.INTERPOLATION_METHOD_SINE = 23;
 	
 	/**
 	 *  Sets the image size to given value. Old content is
@@ -103,6 +132,30 @@ function Image(width, height)
 		this.imageData = newArray;
 	  }
 	
+	/** 
+	 *  Resizes the image with resampling.
+	 *
+	 *  @param width new width in pixels
+	 *  @param height new height in pixels
+	 */
+	
+	this.resize = function(width, height)
+	  {
+	    var oldImage = this.copy();
+		
+		this.setSize(width,height);
+		
+		this.forEachPixel
+		  (
+		    function (x, y, r, g, b)
+			  {
+			    x = (x / (width - 1)) * (oldImage.getWidth() - 1);
+			    y = (y / (height - 1)) * (oldImage.getHeight() - 1);
+			    return oldImage.getPixel(x,y);
+			  }
+		  );
+	  }
+	
 	/**
 	 *  Loads the image from input element of HTML5 File API.
 	 *  This allows for client local images to be loaded. The loading
@@ -112,6 +165,8 @@ function Image(width, height)
 	 *    file selected (otherwise nothing happens)
 	 *  @param completedCallback a function that will be run
 	 *    once the loading has been completed
+	 *  @return true if the image succesfully started being loaded,
+	      false otherwise
 	 */
 	
 	this.loadFromInput = function(input, completedCallback)
@@ -167,7 +222,10 @@ function Image(width, height)
 		      )(imageElement);
 		
 		    reader.readAsDataURL(file);
+		    return true;
 		  }  
+		  
+		return false;
 	  }
 	
 	/**
@@ -265,6 +323,19 @@ function Image(width, height)
 	  }
 	  
 	/**
+	 *  Sets the interpolation method, i.e. how the values will
+	 *  be sampled between the pixels.
+	 *
+	 *  @param method new interpolation method to be set, see the
+	 *    class constants starting with INTERPOLATION_METHOD_
+	 */
+	  
+	this.setInterpolationMethod = function(method)
+	  {
+		this.interpolationMethod = method;
+	  }
+	  
+	/**
 	 *  Sets the overflow behavior for the image, i.e. the rules
      *  that say how a pixel value should be converted to the
 	 *  minimum/maximum	range if it exceeds it.
@@ -301,7 +372,9 @@ function Image(width, height)
 	  }
 			
 	/**
-	 *  Gets a pixel RGB value.
+	 *  Gets a pixel RGB value. The coordinates may be float in
+	 *  which case a sampled value is returned (according to current
+	 *  interpolation method set).
 	 *
 	 *  @param x x position
 	 *  @param y y position
@@ -310,6 +383,9 @@ function Image(width, height)
 			
 	this.getPixel = function(x, y)
 	  {
+		if (x % 1 != 0 || y % 1 != 0)       // non-integer coordinates => sample
+		  return this.samplePixel(x, y);
+		  
 		x = this.applyBorderBehavior(x,this.getWidth() - 1);
 		y = this.applyBorderBehavior(y,this.getHeight() - 1);
 		
@@ -322,6 +398,53 @@ function Image(width, height)
 		  }
 		  
 		return this.imageData[x][y].slice();
+	  }
+	
+	/**
+	 *  Samples the image at given floating point position, i.e.
+	 *  even between its pixels according to the current interpolation
+	 *  method.
+	 *
+	 *  @private
+	 *  @param x x position
+	 *  @param y y position
+	 */
+	
+	this.samplePixel = function(x, y)
+	  {
+		switch (this.interpolationMethod)
+		  {
+			default:
+			case this.INTERPOLATION_METHOD_CLOSEST:
+			  return this.getPixel(Math.round(x),Math.round(y));
+			  break;
+			  
+			case this.INTERPOLATION_METHOD_BILINEAR:
+			  var x0 = Math.floor(x);
+			  var x1 = Math.ceil(x);
+			  var xRatio = x - x0;
+			  var xRatio2 = 1 - xRatio;
+			  var y0 = Math.floor(y);
+			  var y1 = Math.ceil(y);
+			  var yRatio = y - y0;
+			  var yRatio2 = 1 - yRatio;
+			  var c1 = this.getPixel(x0,y0);
+			  var c2 = this.getPixel(x1,y0);
+			  var c3 = this.getPixel(x0,y1);
+			  var c4 = this.getPixel(x1,y1);
+			  
+			  for (var component = 0; component < 3; component++)
+			    {
+				  c1[component] = c1[component] * xRatio2 + c2[component] * xRatio;
+				  c3[component] = c3[component] * xRatio2 + c4[component] * xRatio;
+				  c1[component] = Math.round(c1[component] * yRatio2 + c3[component] * yRatio);
+				}
+			  
+			  return c1;
+			  break;
+		  }
+		  
+		return [0,0,0];
 	  }
 	
     /**
@@ -487,6 +610,17 @@ function Image(width, height)
 		  );		
 	  }
 	  
+	/**
+	 *  Gets a short image description as a string.
+	 *
+	 *  @return string with object info
+	 */
+	  
+	this.toString = function()
+	  {
+		return "size: " + this.getWidth().toString() + " x " + this.getHeight().toString();
+	  }
+	  
 	this.dft = function()
 	  {  
 	  }
@@ -500,6 +634,26 @@ function Image(width, height)
 	  }
 	  
 	this.idct = function()
+	  {
+	  }
+	  
+	this.drawLine = function()
+	  {
+	  }
+	  
+	this.drawCircle = function()
+	  {
+	  }
+	  
+	this.generatePerlinNoise = function()
+	  {
+	  }
+	  
+	this.threshold = function()
+	  {
+	  }
+	  
+	this.applyFilter = function()
 	  {
 	  }
 		
@@ -516,6 +670,7 @@ function Image(width, height)
 	  }
 			
 	this.setBorderBehavior(this.BORDER_BEHAVIOR_WHITE);
+	this.setInterpolationMethod(this.INTERPOLATION_METHOD_BILINEAR);
 	this.setOverflowBehavior(this.OVERFLOW_BEHAVIOR_SATURATE);
 	this.fill(255,255,255);
   };
