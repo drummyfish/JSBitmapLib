@@ -814,10 +814,20 @@ function Image(width, height)
 	 *  Draws the image to given canvas element.
 	 *
 	 *  @param canvas canvas element to draw the image to
+	 *  @param resize bool value, says whether the canvas should be
+	 *    resized to the image size (default is true)
 	 */
 			
-    this.drawToCanvas = function(canvas)
+    this.drawToCanvas = function(canvas, resize)
 	  { 
+	    resize = typeof resize !== 'undefined' ? resize : true;
+	  
+	    if (resize)
+		  {
+			canvas.width = this.getWidth();
+			canvas.height = this.getHeight();
+		  }
+	  
 	    var context = canvas.getContext("2d");
 		var id = context.createImageData(this.getWidth(),this.getHeight());
         var data  = id.data;                        
