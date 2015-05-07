@@ -4,6 +4,10 @@
   <script src="src/ace.js"></script>
   <script src="src/mode-javascript.js"></script>
   <script src="bitmaplib.js"></script>
+  <script src="FileSaver.js"></script>
+  <script src="Blob.js"></script>
+  <script src="canvas-toBlob.js"></script>
+  <script src="jszip.js"></script>
 
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
@@ -98,6 +102,17 @@
     var editor;
 	var consoleEditor;
 	var preview;
+	var inputs;
+  
+    function resize()
+      {
+        var h = window.innerHeight;
+        
+        var editorLines = (h / 2) / 14;
+        
+        editor.setOption("maxLines",editorLines);
+        editor.setOption("minLines",editorLines);
+      };
   
     function consoleWrite(text)
 	  {
@@ -107,6 +122,11 @@
     function consoleClear()
 	  {
 	    consoleEditor.setValue("");
+	  }
+  
+    function runClicked()
+	  { 
+        inputs = loadImagesFromInputs([document.getElementById("input1"),document.getElementById("input2"),document.getElementById("input3")],run);
 	  }
   
     function run()
@@ -129,9 +149,71 @@
 		  }
 	  }
 	
+	function displayHelp()
+	  {
+	    consoleWrite("--- JavaScript image processor, lib version 0.1 ---");
+	    consoleWrite("Miloslav 'tastyfish' Číž, 2015");
+	    consoleWrite("");
+		consoleWrite("This is a JavaScript programmable raster image processor.");
+		consoleWrite("Its goal isn't to be lightning-fast (if it was, it wouldn't");
+		consoleWrite("be written in JavaScript), although it tries to be");
+		consoleWrite("reasonably fast... the main goal is to be usable qucikly.");
+		consoleWrite("This editor uses its own pure-JavaScript library. Usage:");
+		consoleWrite("");
+		consoleWrite("  - Display image: image.drawToCanvas(preview).");
+		consoleWrite("  - Load image from file: use the input buttons below,");
+		consoleWrite("    then the image will be in inputs[0..2].");
+	    consoleWrite("  - Save the image: download button, or download() function");
+	    consoleWrite("    or downloadZip(image1, image2, ...) function. ");
+	    consoleWrite("  - Library reference: ");
+        consoleWrite("  - Other commands: consoleWrite(text), consoleClear().");
+		consoleWrite("-----------------------------------------------------------");
+	  }
+    
+    /**
+     *  Downloads multiple images given as arguments in one zip file.
+     */
+    
+    function downloadZip()
+      {
+        var zip = new JSZip();
+        
+        for (var i = 0; i < arguments.length; i++)
+          {
+            var tempCanvas = document.createElement("canvas");
+          
+            arguments[i].drawToCanvas(tempCanvas);
+          
+            var data = tempCanvas.toDataURL();
+            
+            zip.file("image" + (i + 1).toString() + ".png",data.substr(data.indexOf(',') + 1),{base64: true});
+          }
+        
+        var content = zip.generate({type:"blob"});
+        saveAs(content,"arguments.zip");
+      }
+    
+    /**
+     *  Downloads the preview image.
+     */
+    
+    function download(name)
+      {
+        context = preview.getContext("2d");
+        preview.toBlob(
+          function(blob)
+            {
+              saveAs(blob,name);
+            });
+      }
+    
 	function onLoad()
 	  {
 	    preview = document.getElementById("preview");
+        preview.width = 256;
+        preview.height = 256;        
+        window.addEventListener("resize",resize);
+        resize();
 	  }
   </script>
 </head>
@@ -152,20 +234,22 @@
 	
     <tr>
       <td>
-        <button class="pure-button" onclick="run()">run</button>
-        <button class="pure-button" onclick="consoleClear()">clear console</button>
+        <button class="pure-button" onclick="runClicked()">run</button>
+        <button class="pure-button" onclick="consoleClear()">clear</button>
+        <button class="pure-button" onclick="displayHelp()">help</button>
+        <button class="pure-button" onclick="download()">download</button>
 		<br />
 		<div class="inputWrapper">
 	      <p>input 1</p>
-	      <input class="fileInput" type="file" />
+	      <input class="fileInput" type="file" id="input1" />
 	    </div>
 	    <div class="inputWrapper">
 	      <p>input 2</p>
-	      <input class="fileInput" type="file" />
+	      <input class="fileInput" type="file" id="input2" />
 	    </div>
 	    <div class="inputWrapper">
 	      <p>input 3</p>
-	      <input class="fileInput" type="file" />
+	      <input class="fileInput" type="file" id="input3" />
 	    </div>
       </td>
     </tr>

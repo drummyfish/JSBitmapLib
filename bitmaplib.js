@@ -1,4 +1,10 @@
 /**
+ * CRABBO LIB
+ *
+ *
+ */
+ 
+/**
  * Wraps given value into interval <0,maximum>.
  * @private
  *
@@ -20,6 +26,17 @@ function wrap(value, maximum)
 	  
 	if (value != 0)
 	  value = value % maximum;
+  
+    return value;
+  }
+  
+function saturate(value, minimum, maximum)
+  {
+    if (value < minimum)
+      return minimum;
+
+    if (value > maximum)
+      return maximum;        
   
     return value;
   }
@@ -54,10 +71,16 @@ function loadImagesFromInputs(inputs, completedCallback)
 		result.push(image);
 		
 		if (!image.loadFromInput(inputs[i],checkImages))
-		  {
+		  { console.log("a");
 			result[result.length - 1] = null;
 		    counter--;
-		  }
+		  
+            if (counter == 0)
+              {
+                completedCallback();
+                return result;
+              }
+          }
 	  }
 	  
 	return result;
@@ -73,15 +96,35 @@ function loadImagesFromInputs(inputs, completedCallback)
   
 function Matrix(width, height)
   {  
+    /**
+     *  Gets the matrix width.
+     *
+     *  @return matrix width
+     */ 
+  
     this.getWidth = function()
 	  {
 		return this.data.length;
 	  }
 	  
+    /**
+     *  Gets the matrix height.
+     *
+     *  @return matrix height
+     */ 
+      
 	this.getHeight = function()
 	  {
 		return this.data[0].length;
 	  }
+  
+    /**
+     *  Gets the matrix value at given position.
+     *
+     *  @param x x position
+     *  @param y y position
+     *  @return value at given position
+     */
   
     this.getValue = function(x, y)
 	  {  
@@ -94,6 +137,14 @@ function Matrix(width, height)
 	    return this.data[x][y];
 	  }
 	
+    /**
+     *  Sets the matrix value at given position.
+     *
+     *  @param x x position
+     *  @param y y position
+     *  @param value value
+     */
+    
 	this.setValue = function(x, y, value)
 	  {
 		if (x < 0 || x >= this.getWidth() || y < 0 || y >= this.getHeight())
@@ -106,24 +157,22 @@ function Matrix(width, height)
 	  }
 	  
 	/**
-	 *  Sets matrix values from given (1D) array. The array will be
-	 *  traversed from left and its values will be set to matrix which
+	 *  Sets matrix values from given values. The values will be
+	 *  traversed from left and they will be set to matrix which
 	 *  will be traversed from top left by lines.
-	 *
-	 *  @param values array of values
 	 */
 	  
-	this.setValues = function(values)
+	this.setValues = function()
 	  {
 		var position = 0;
 		
 		for (var j = 0; j < this.getHeight(); j++)
 		  for (var i = 0; i < this.getWidth(); i++)
 		    {
-			  if (position >= values.length)
+			  if (position >= arguments.length)
 				return;
 				
-			  this.setValue(i,j,values[position]);
+			  this.setValue(i,j,arguments[position]);
 				
 			  position++;
 			}
@@ -175,6 +224,12 @@ function Matrix(width, height)
 		return result;
 	  }
 	  
+    /**
+     *  Returns a string representing the matrix.
+     *
+     *  @return string representing the matrix
+     */
+      
 	this.toString = function()
 	  {
 		var result = "";
@@ -248,6 +303,13 @@ function Image(width, height)
 	this.DERIVATIVE_TYPE_Y = 31;
 	/** derivative by x and y axis */
 	this.DERIVATIVE_TYPE_XY = 32;
+	
+	/** blend by adding */
+	this.BLEND_TYPE_ADD = 40;
+	/** blend by substracting */
+	this.BLEND_TYPE_SUBSTRACT = 41;
+	/** blend by multiplying */
+	this.BLEND_TYPE_MULTIPLY = 42;
 	
 	/**
 	 *  Sets the image size to given value. Old content is
@@ -965,6 +1027,126 @@ function Image(width, height)
 		return "size: " + this.getWidth().toString() + " x " + this.getHeight().toString();
 	  }
 	  
+	/**
+	 *  Blends the image with another image, the result is saved in this image.
+	 *
+	 *  @param withWhat the image that this image should be blend with
+	 *  @param percentage a number in range <0,1>, specifies the blend ratio,
+	 *    this is ignored if the mask parameter is used
+	 *  @param type blend type, see the class constants starting with
+	 *    BLEND_TYPE_
+	 *  @param mask specifies an image that should be used as per-pixel
+     *    blending mask (each RGB channel is used as a mask for corresponding
+	 *    channel)
+	 */
+	  
+	this.blend = function(withWhat, percentage, type, mask)
+	  {
+        type = typeof type !== 'undefined' ? type : this.BLEND_TYPE_ADD;
+          
+        percentage = saturate(percentage,0,1);
+          
+        var makeCoefficients = function(value)
+          {
+            var c1 = value <= 0.5 ? 1 : 1 - (value - 0.5) * 2.0;
+            var c2 = value > 0.5 ? 1 : value * 2.0;  
+            return [c1,c2];
+          }
+
+        var coefficients = makeCoefficients(percentage);
+          
+        var helperFunction;
+          
+        switch (type)
+		  {
+			default:
+			case this.BLEND_TYPE_ADD:
+			  helperFunction = function(a, b){ return a + b };
+              break;
+					  
+			case this.BLEND_TYPE_SUBSTRACT:
+			  helperFunction = function(a, b){ return a - b };
+			  break;
+					
+			case this.BLEND_TYPE_MULTIPLY:
+			  helperFunction = function(a, b){ return a * b };
+			  break;
+		}
+          
+		this.forEachPixel
+          (
+            function(x, y, r, g, b)
+              {
+                var c = withWhat.getPixel(x,y);               
+               
+                r *= coefficients[0];
+                g *= coefficients[0];
+                b *= coefficients[0];
+               
+                c[0] *= coefficients[1];
+                c[1] *= coefficients[1];
+                c[2] *= coefficients[1];
+               
+                r = helperFunction(r,c[0]);
+                g = helperFunction(g,c[1]);
+                b = helperFunction(b,c[2]);
+               
+                return [r,g,b];
+              }
+          );
+	  }
+	  
+    /**
+     *  Convolves the image with given matrix.
+     *
+     *  @param matrix matrix to convolve the image with
+     */
+      
+    this.convolve = function(matrix)
+      {
+        var tempImage = this.copy();
+        
+        var middleX = matrix.getWidth() / 2;
+        var middleY = matrix.getHeight() / 2;
+        
+        var widthMinusOne = matrix.getWidth() - 1;
+        var heightMinusOne = matrix.getHeight() - 1;
+        
+        var sumR, sumG, sumB, startX, startY, helperX, helperX2, c, value;
+    
+        for (var j = 0; j < this.getHeight(); j++)
+          {
+            startY = j - middleY;
+              
+            for (var i = 0; i < this.getHeight(); i++)
+              {
+                sumR = 0;
+                sumG = 0;
+                sumB = 0;
+                
+                startX = i - middleX;
+                
+                for (k = 0; k < matrix.getWidth(); k++)
+                  {
+                    helperX = startX + k;
+                    helperX2 = widthMinusOne - k;               
+                
+                    for (l = 0; l < matrix.getHeight(); l++)
+                      {
+                        c = tempImage.getPixel(helperX,startY + l);
+                        value = matrix.getValue(helperX2,heightMinusOne - l);
+                    
+                        sumR += c[0] * value;
+                        sumG += c[1] * value;
+                        sumB += c[2] * value;
+                      }
+                  }
+                  
+              this.setPixel(i,j,sumR,sumG,sumB);
+            }
+          }
+      }
+      
 	this.dft = function()
 	  {  
 	  }
@@ -994,10 +1176,6 @@ function Image(width, height)
 	  }
 	  
 	this.threshold = function()
-	  {
-	  }
-	  
-	this.applyFilter = function()
 	  {
 	  }
 		
