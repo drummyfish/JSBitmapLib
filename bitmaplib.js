@@ -71,7 +71,7 @@ function loadImagesFromInputs(inputs, completedCallback)
 		result.push(image);
 		
 		if (!image.loadFromInput(inputs[i],checkImages))
-		  { console.log("a");
+		  {
 			result[result.length - 1] = null;
 		    counter--;
 		  
@@ -225,6 +225,20 @@ function Matrix(width, height)
 	  }
 	  
     /**
+     *  Decomposes the separable filter represented by this matrix
+     *  to two vectors - horizontal and vertical.
+     *
+     *  @return array containing horizontal and vertical vectors as
+     *    row matrices or null if the filter cannot be decomposed
+     *    because it isn't separable
+     */
+      
+    this.decomposeSeparable = function()
+      {
+        // TODO
+      }
+      
+    /**
      *  Returns a string representing the matrix.
      *
      *  @return string representing the matrix
@@ -311,6 +325,77 @@ function Image(width, height)
 	/** blend by multiplying */
 	this.BLEND_TYPE_MULTIPLY = 42;
 	
+    /**
+     *  Performs either dilation or erosion.
+     *  @private
+     *
+     *  @param dilation if true, dilation is performed, otherwise erosion
+     *  @param sourceImage image to perform the operation with
+     *  @param matrix matrix representing the structuring element,
+     *    negative values are ignored
+     *  @param centerX x center of the structuring element
+     *  @param centerY y center of the structuring element
+     */
+    
+    var morphology = function(dilation, sourceImage, matrix, centerX, centerY)
+      {
+        var value, i, j, c, component, extremes, fromX, fromY, helper, tempCopy;
+          
+        extremes = new Array(3);    // rgb
+        tempCopy = sourceImage.copy();
+          
+        sourceImage.forEachPixel
+          (
+            function (x, y, r, g, b)
+              { 
+                if (dilation)
+                  {                    
+                    extremes[0] = 0;
+                    extremes[1] = 0;
+                    extremes[2] = 0;
+                  }
+                else
+                  {
+                    extremes[0] = 255;
+                    extremes[1] = 255;
+                    extremes[2] = 255;
+                  }
+                
+                fromX = x - centerX;
+                fromY = y - centerY;
+                      
+                for (j = 0; j < matrix.getHeight(); j++)
+                  for (i = 0; i < matrix.getWidth(); i++)
+                    {
+                      value = matrix.getValue(i,j);
+                          
+                      if (value < 0)
+                        continue;
+                        
+                      c = tempCopy.getPixel(fromX + i,fromY + j);
+                      
+                      for (component = 0; component < 3; component++)
+                        {
+                          helper = c[component] + value;
+
+                          if (dilation)
+                            {    
+                              if (helper > extremes[component])
+                                extremes[component] = helper;    
+                            }
+                          else
+                            {
+                              if (helper < extremes[component])
+                                extremes[component] = helper;
+                            }
+                        }
+                    }
+                    
+                return extremes;
+              }
+          );  
+      }
+    
 	/**
 	 *  Sets the image size to given value. Old content is
      *  either cropped or extended according to current border
@@ -695,6 +780,7 @@ function Image(width, height)
 			  break;
 			  
 			case this.INTERPOLATION_METHOD_BICUBIC:
+              // TODO
 			  var result = [0,0,0];
 			
 	          var x0 = Math.floor(x);
@@ -754,10 +840,11 @@ function Image(width, height)
 				  var coefficients = matrix1.multiply(matrix);
 				  coefficients = coefficients.multiply(matrix2);
 					
+                    
 				  for (var j = 0; j < 3; j++)
 				    for (var i = 0; i < 3; i++)
 				      {
-					    result[component] += coefficients.getValue(i,j) * Math.pow(xRatio,i) * Math.pow(yRatio,j);
+					    result[component] += coefficients.getValue(j,i) * Math.pow(xRatio,i) * Math.pow(yRatio,j);
 				      }
 					  
 				  result[component] = Math.round(result[component]);
@@ -1006,14 +1093,32 @@ function Image(width, height)
 		  );		
 	  }
 	  
-	this.dilate = function()
+    /**
+     *  Performs morphology dilation with the image.
+     *
+     *  @param matrix matrix representing the structuring element,
+     *    negative values are ignored
+     *  @param centerX x center of the structuring element
+     *  @param centerY y center of the structuring element
+     */
+      
+	this.dilate = function(matrix, centerX, centerY)
 	  {
-		  
+        morphology(true,this,matrix,centerX,centerY);
 	  }
+
+    /**
+     *  Performs morphology erosion with the image.
+     *
+     *  @param matrix matrix representing the structuring element,
+     *    negative values are ignored
+     *  @param centerX x center of the structuring element
+     *  @param centerY y center of the structuring element
+     */
 	  
-	this.erode = function()
+	this.erode = function(matrix, centerX, centerY)
 	  {
-		  
+        morphology(false,this,matrix,centerX,centerY);
 	  }
 	  
 	/**
