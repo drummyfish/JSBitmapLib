@@ -40,7 +40,7 @@ function saturate(value, minimum, maximum)
   
     return value;
   }
-
+  
 /**
  *  Loads images from given set of input elements.
  *
@@ -117,6 +117,26 @@ function Matrix(width, height)
 	  {
 		return this.data[0].length;
 	  }
+  
+    /**
+     *  Creates a deep copy of the matrix. 
+     *
+     *  @return new matrix with the same size and values
+     *    as this matrix
+     */
+  
+    this.copy = function()
+      {
+        var result = new Matrix(this.getWidth(),this.getHeight());
+        
+        var i, j;
+        
+        for (j = 0; j < this.getHeight(); j++)
+          for (i = 0; i < this.getWidth(); i++)
+            result.setValue(i,j,this.getValue(i,j));
+        
+        return result;
+      }
   
     /**
      *  Gets the matrix value at given position.
@@ -261,6 +281,29 @@ function Matrix(width, height)
 		return result;
 	  }
 	
+    /**
+     *  Creates a grayscale image from the matrix values. The
+     *  values are floored to integers and saturated to <0,255>.
+     *
+     *  @return newly created image
+     */
+    
+    this.toImage = function()
+      {
+        var result = new Image(this.getWidth(),this.getHeight());
+        var selfReference = this;
+       
+        result.forEachPixel(
+          function(x, y, r, g, b)
+            {
+              var value = saturate(Math.floor(selfReference.getValue(x,y)),0,255);
+              return [value,value,value];
+            }
+          );
+       
+        return result;
+      }
+    
 	// init the matrix:
   
 	this.data = new Array(width);
@@ -933,6 +976,10 @@ function Image(width, height)
         if (x < 0 || y < 0)   // unusable values
 		  return;
 		  
+        red = Math.floor(red);
+        green = Math.floor(green);
+        blue = Math.floor(blue);
+          
 	    this.imageData[x][y][0] = this.applyOverflowBehavior(red);
 		this.imageData[x][y][1] = this.applyOverflowBehavior(green);
 		this.imageData[x][y][2] = this.applyOverflowBehavior(blue);
@@ -949,8 +996,8 @@ function Image(width, height)
 			
 	this.forEachPixel = function(functionToApply)
 	  {
-	    for (var i = 0; i < this.getWidth(); i++)
-		  for (var j = 0; j < this.getHeight(); j++)
+        for (var j = 0; j < this.getHeight(); j++)
+	      for (var i = 0; i < this.getWidth(); i++)
 		    {
 		      var color = this.getPixel(i,j);
 			  color = functionToApply(i,j,color[0],color[1],color[2],this);
@@ -1259,11 +1306,194 @@ function Image(width, height)
 	this.idft = function()
 	  {  
 	  }
-	  
+      
+    /**
+     *  Merges three images, each representing one RGB channel, into a new
+     *  RGB image. Only red channel of each image is taken. The result is
+     *  overwrites the current image content.
+     *
+     *  @param imageR image representing the red channel
+     *  @param imageG image representing the green channel
+     *  @param imageB image representing the blue channel
+     */     
+      
+    this.mergeChannels = function(imageR, imageG, imageB)
+      {
+        this.setSize(imageR.getWidth(),imageR.getHeight());
+
+        var i, j, c1, c2, c3;
+
+        for (j = 0; j < this.getHeight(); j++)
+          for (i = 0; i < this.getHeight(); i++)
+            {
+              c1 = imageR.getPixel(i,j);
+              c2 = imageG.getPixel(i,j);
+              c3 = imageB.getPixel(i,j);
+              
+              this.setPixel(i,j,c1[0],c2[0],c3[0]);
+            }              
+      }
+      
+    /**
+     *  Creates matrices of each image channel values and
+     *  returns them.
+     *
+     *  @return three-item array holding the R, G and B
+     *    channel values matrices
+     */
+      
+    this.toMatrices = function()
+      {
+        var result =
+          [
+            new Matrix(this.getWidth(),this.getHeight()),
+            new Matrix(this.getWidth(),this.getHeight()),
+            new Matrix(this.getWidth(),this.getHeight())
+          ];
+          
+        this.forEachPixel
+          (
+            function(x, y, r, g, b)
+              {
+                result[0].setValue(x,y,r);
+                result[1].setValue(x,y,g);
+                result[2].setValue(x,y,b);
+                
+                return [r,g,b];
+              }
+          );
+        
+        return result;
+      }
+      
+    this.toString = function()
+      {
+        var result = "";
+        var rStr, gStr, bStr, str, c;
+        
+        for (var j = 0; j < this.getHeight(); j++)
+          {
+            for (var i = 0; i < this.getWidth(); i++)
+              {
+                c = this.getPixel(i,j);
+                
+                rStr = c[0].toString();
+                gStr = c[1].toString();
+                bStr = c[2].toString();
+                  
+                str = "[" + rStr + "," + gStr + "," + bStr + "]";
+                
+                result += str;
+                
+                for (k = 0; k < 14 - str.length; k++)
+                  result += " ";
+              }
+          
+            result += "\n";
+          }
+          
+        return result;
+      }
+      
+    /**
+     *  Performs 2D discrete cosine transform on the image.
+     *
+     *  @return new image with DCT coefficients
+     */
+      
 	this.dct = function()
 	  {	  
+        var result = new Image(this.getWidth(),this.getHeight());
+      
+        var sum = [0,0,0];
+        var v;
+        var helper;
+        var x, y, i, j;
+        var byLines;
+        var limit;
+     //   var tempCopy = this.copy();
+        var coord;
+      
+        var matricesSource = this.toMatrices();
+        var matricesDest = this.toMatrices();
+      
+        /* make the transformation separable, first by rows, then
+           by columns, this only has a complexity of O(n^3) */
+      
+        byLines = true;
+        v = [0,0,0];
+      
+        for (j = 0; j < 2; j++)  // by rows, then by columns
+          {
+            limit = byLines ? this.getWidth() : this.getHeight();
+              
+            for (y = 0; y < this.getHeight(); y++)
+              {
+                for (x = 0; x < this.getWidth(); x++)
+                  {
+                    sum = [0,0,0];
+                    
+                    coord = (byLines ? x : y);
+                  
+                    for (i = 0; i < limit; i++)
+                      {
+                        if (byLines)
+                          v = [matricesSource[0].getValue(i,y), matricesSource[1].getValue(i,y), matricesSource[2].getValue(i,y)];                            
+                        else
+                          v = [matricesSource[0].getValue(x,i), matricesSource[1].getValue(x,i), matricesSource[2].getValue(x,i)];
+                                                  
+                        helper = Math.cos(Math.PI * (2 * i + 1) * coord / (2 * limit));
+                      
+                     //   helper = coord == 0 ? (1.0 / Math.sqrt(2)) : 1;
+                     
+                     //   helper *= Math.sqrt(2.0 / limit) * Math.cos(coord * Math.PI / limit * (i + 1 / 2.0));
+                             
+                        sum[0] += v[0] * helper;
+                        sum[1] += v[1] * helper;
+                        sum[2] += v[2] * helper;
+                      }
+
+                    if (coord == 0)
+                      {
+                        sum[0] *= Math.sqrt(1.0 / limit);
+                        sum[1] *= Math.sqrt(1.0 / limit);
+                        sum[2] *= Math.sqrt(1.0 / limit);
+                      }
+                    else
+                      { 
+                        sum[0] *= Math.sqrt(2.0 / limit);
+                        sum[1] *= Math.sqrt(2.0 / limit);
+                        sum[2] *= Math.sqrt(2.0 / limit);
+                      }
+             
+                    matricesDest[0].setValue(x,y,sum[0]);
+                    matricesDest[1].setValue(x,y,sum[1]);
+                    matricesDest[2].setValue(x,y,sum[2]);
+                  }
+              }
+              
+            matricesSource[0] = matricesDest[0].copy();
+            matricesSource[1] = matricesDest[1].copy();
+            matricesSource[2] = matricesDest[2].copy();
+            byLines = false;
+          }
+          
+        var imageR = matricesDest[0].toImage();
+        var imageG = matricesDest[1].toImage();
+        var imageB = matricesDest[2].toImage();
+          
+        result.mergeChannels(imageR,imageG,imageB);
+          
+        return result;
 	  }
 	  
+    /**
+     *  Performs 2D inverse discrete cosine transform on the image.
+     *
+     *  @return new reconstructed image
+     *
+     */
+      
 	this.idct = function()
 	  {
 	  }
