@@ -1335,6 +1335,24 @@ function Image(width, height)
       }
       
     /**
+     *  Same as mergeChannels except that the arguments are matrices
+     *  instead of images.
+     *
+     *  @param matrixR matrix representing the red channel
+     *  @param matrixG matrix representing the green channel
+     *  @param matrixB matrix representing the blue channel
+     */
+      
+    this.mergeChannelsFromMatrices = function(matrixR, matrixG, matrixB)
+      {
+        var imageR = matrixR.toImage();
+        var imageG = matrixG.toImage();
+        var imageB = matrixB.toImage();
+          
+        this.mergeChannels(imageR,imageG,imageB);
+      }
+      
+    /**
      *  Creates matrices of each image channel values and
      *  returns them.
      *
@@ -1394,27 +1412,40 @@ function Image(width, height)
           
         return result;
       }
-      
+    
     /**
-     *  Performs 2D discrete cosine transform on the image.
+     *  Performes either 2D DCT or IDCT.
+     *  @private
      *
-     *  @return new image with DCT coefficients
-     */
+     *  @param dct if true, DCT is performed, otherwise IDCT
+     *  @param matrixR red channel matrix for IDCT
+     *  @param matrixG green channel matrix for IDCT
+     *  @param matrixB blue channel matrix for IDCT
+     *  @return if dct is true, three-index matrix representing the
+     *    DCT transformation of each RGB channel of the image
+     */     
       
-	this.dct = function()
-	  {	  
-        var result = new Image(this.getWidth(),this.getHeight());
-      
+    this.dctOrIdct = function(dct, matrixR, matrixG, matrixB)
+      {
+        if (!dct)
+          this.setSize(matrixR.getWidth(),matrixR.getHeight());
+          
         var sum = [0,0,0];
         var v;
+        var coeff, coeff1, coeff2;
         var helper;
         var x, y, i, j;
         var byLines;
         var limit;
-     //   var tempCopy = this.copy();
         var coord;
-      
-        var matricesSource = this.toMatrices();
+        
+        var matricesSource;
+        
+        if (dct)
+          matricesSource = this.toMatrices();
+        else
+          matricesSource = [matrixR, matrixG, matrixB];  
+        
         var matricesDest = this.toMatrices();
       
         /* make the transformation separable, first by rows, then
@@ -1426,6 +1457,8 @@ function Image(width, height)
         for (j = 0; j < 2; j++)  // by rows, then by columns
           {
             limit = byLines ? this.getWidth() : this.getHeight();
+            coeff1 = Math.sqrt(1.0 / limit);
+            coeff2 = Math.sqrt(2.0 / limit);
               
             for (y = 0; y < this.getHeight(); y++)
               {
@@ -1435,35 +1468,30 @@ function Image(width, height)
                     
                     coord = (byLines ? x : y);
                   
-                    for (i = 0; i < limit; i++)
+                    for (i = 0; i < limit; i++)     // sum the whole line or column
                       {
                         if (byLines)
                           v = [matricesSource[0].getValue(i,y), matricesSource[1].getValue(i,y), matricesSource[2].getValue(i,y)];                            
                         else
                           v = [matricesSource[0].getValue(x,i), matricesSource[1].getValue(x,i), matricesSource[2].getValue(x,i)];
-                                                  
-                        helper = Math.cos(Math.PI * (2 * i + 1) * coord / (2 * limit));
-                      
-                     //   helper = coord == 0 ? (1.0 / Math.sqrt(2)) : 1;
-                     
-                     //   helper *= Math.sqrt(2.0 / limit) * Math.cos(coord * Math.PI / limit * (i + 1 / 2.0));
-                             
-                        sum[0] += v[0] * helper;
-                        sum[1] += v[1] * helper;
-                        sum[2] += v[2] * helper;
+                          
+                        if (dct)
+                          {
+                            helper = Math.cos(Math.PI * (2 * i + 1) * coord / (2 * limit));
+                            sum[0] += v[0] * helper; sum[1] += v[1] * helper; sum[2] += v[2] * helper;  
+                          }
+                        else
+                          {
+                            coeff = i == 0 ? coeff1 : coeff2;
+                            helper = Math.cos(Math.PI * (2 * coord + 1) * i / (2 * limit));               
+                            sum[0] += coeff * v[0] * helper; sum[1] += coeff * v[1] * helper; sum[2] += coeff * v[2] * helper;  
+                          }   
                       }
-
-                    if (coord == 0)
-                      {
-                        sum[0] *= Math.sqrt(1.0 / limit);
-                        sum[1] *= Math.sqrt(1.0 / limit);
-                        sum[2] *= Math.sqrt(1.0 / limit);
-                      }
-                    else
-                      { 
-                        sum[0] *= Math.sqrt(2.0 / limit);
-                        sum[1] *= Math.sqrt(2.0 / limit);
-                        sum[2] *= Math.sqrt(2.0 / limit);
+                    
+                    if (dct)
+                      {                        
+                        coeff = coord == 0 ? coeff1 : coeff2;
+                        sum[0] *= coeff; sum[1] *= coeff; sum[2] *= coeff;
                       }
              
                     matricesDest[0].setValue(x,y,sum[0]);
@@ -1478,24 +1506,38 @@ function Image(width, height)
             byLines = false;
           }
           
-        var imageR = matricesDest[0].toImage();
-        var imageG = matricesDest[1].toImage();
-        var imageB = matricesDest[2].toImage();
-          
-        result.mergeChannels(imageR,imageG,imageB);
-          
-        return result;
+        if (dct)
+          return matricesDest;
+        else
+          this.mergeChannelsFromMatrices(matricesDest[0],matricesDest[1],matricesDest[2]);     
+      }
+      
+    /**
+     *  Performs 2D discrete cosine transform on the image.
+     *
+     *  @return three-index matrix representing the DCT transformation
+     *    of each RGB channel of the image
+     */
+      
+	this.dct = function()
+	  {	  
+        return this.dctOrIdct(true);
 	  }
 	  
     /**
-     *  Performs 2D inverse discrete cosine transform on the image.
+     *  Performs 2D inverse discrete cosine transform on given matrices and
+     *  stores the result in this image.
      *
+     *  @param matrixR matrix containing red channel DCT coefficients
+     *  @param matrixG matrix containing green channel DCT coefficients
+     *  @param matrixB matrix containing blue channel DCT coefficients
      *  @return new reconstructed image
      *
      */
       
-	this.idct = function()
+	this.idct = function(matrixR, matrixG, matrixB)
 	  {
+        this.dctOrIdct(false,matrixR,matrixG,matrixB);
 	  }
 	  
 	this.drawLine = function()
