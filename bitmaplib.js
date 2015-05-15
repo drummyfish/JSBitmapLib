@@ -984,14 +984,39 @@ function Image(width, height)
 		this.imageData[x][y][1] = this.applyOverflowBehavior(green);
 		this.imageData[x][y][2] = this.applyOverflowBehavior(blue);
 	  }
-			
+		
+    /**
+     *  Applies threshold to the image.
+     *
+     *  @param levels number of levels, defaults to 2
+     */
+        
+    this.threshold = function(levels)
+      { 
+        levels = typeof levels !== 'undefined' ? levels : 2; 
+       
+        var helper = levels - 1;
+       
+        this.forEachPixel
+          (
+            function(x, y, r, g, b)
+              {
+                r = Math.floor(r / 255 * (levels)) / helper * 255;
+                g = Math.floor(g / 255 * (levels)) / helper * 255;
+                b = Math.floor(b / 255 * (levels)) / helper * 255;
+                return [r,g,b];
+              }
+          );
+      }
+        
 	/**
 	 *  Performs given operation represented by a function
 	 *  on every image pixel.
 	 *
 	 *  @param functionToApply function to be applied, the function must
-	 *    return three-component of RGB components, parameters passed to
-	 *    it will be: x, y, red, green, blue, imageReference
+	 *    return either three-component of RGB components or null or,
+     *    undefined parameters passed to it will be: x, y, red, green,
+     *    blue, imageReference
 	 */
 			
 	this.forEachPixel = function(functionToApply)
@@ -1002,7 +1027,8 @@ function Image(width, height)
 		      var color = this.getPixel(i,j);
 			  color = functionToApply(i,j,color[0],color[1],color[2],this);
 			  
-			  this.setPixel(i,j,color[0],color[1],color[2]);
+              if (color != null && color != undefined)
+                this.setPixel(i,j,color[0],color[1],color[2]);
 		    }
 	  }
 			
@@ -1376,8 +1402,6 @@ function Image(width, height)
                 result[0].setValue(x,y,r);
                 result[1].setValue(x,y,g);
                 result[2].setValue(x,y,b);
-                
-                return [r,g,b];
               }
           );
         
@@ -1549,10 +1573,6 @@ function Image(width, height)
 	  }
 	  
 	this.generatePerlinNoise = function()
-	  {
-	  }
-	  
-	this.threshold = function()
 	  {
 	  }
 		
