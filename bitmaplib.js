@@ -989,11 +989,13 @@ function Image(width, height)
      *  Applies threshold to the image.
      *
      *  @param levels number of levels, defaults to 2
+     *  @param optional shift value to add to each pixel before thresholding
      */
         
-    this.threshold = function(levels)
+    this.threshold = function(levels, shift)
       { 
         levels = typeof levels !== 'undefined' ? levels : 2; 
+        shift = typeof shift !== 'undefined' ? shift : 0; 
        
         var helper = levels - 1;
        
@@ -1001,6 +1003,10 @@ function Image(width, height)
           (
             function(x, y, r, g, b)
               {
+                r += shift;
+                g += shift;
+                b += shift;
+                  
                 r = Math.floor(r / 255 * (levels)) / helper * 255;
                 g = Math.floor(g / 255 * (levels)) / helper * 255;
                 b = Math.floor(b / 255 * (levels)) / helper * 255;
@@ -1332,6 +1338,33 @@ function Image(width, height)
 	this.idft = function()
 	  {  
 	  }
+      
+    /**
+     *  Splits the image channels into three separate grayscale
+     *  images.
+     *
+     *  @return three-item array with images representing the three channels
+     */
+      
+    this.splitChannels = function()
+      {
+        var w = this.getWidth();
+        var h = this.getHeight();
+          
+        result = [new Image(w,h),new Image(w,h),new Image(w,h)];
+        
+        this.forEachPixel
+          (
+            function(x, y, r, g, b)
+              {
+                result[0].setPixel(x,y,r,r,r);
+                result[1].setPixel(x,y,g,g,g);
+                result[2].setPixel(x,y,b,b,b);
+              }
+          );
+        
+        return result;
+      }
       
     /**
      *  Merges three images, each representing one RGB channel, into a new
