@@ -2,6 +2,8 @@
 
 a simple JavaScript library for bitmap image manipulation
 
+<img align="right" src="https://raw.github.com/drummyfish/izak-lib/master/izak.png" width="256">
+
 This is a KISS, lightweight JavaScript library for basic and advanced bitmap image
 manipulation/processing. You can use it to load images from file and work with them
 using simple object-oriented API providing access to individual pixels and common
@@ -19,7 +21,7 @@ FAQ
 **Q: What can it do?**
 
 A: Basic and more advanced bitmap image processing/manipulation. See feature list below.
-   Also note that this is work-in progress and only some features are implemented at the
+   Also note that this is work-in-progress and only some features are implemented at the
    moment.
 
 **Q: How do I use it?**
