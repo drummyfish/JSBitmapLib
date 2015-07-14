@@ -1,8 +1,9 @@
 /**
- * CRABBO LIB
- *
- *
+ * izak-lib
+ * simple bitmap image manipulation library
+ * Miloslav Číž
  */
+
 /**
  * Wraps given value into interval <0,maximum>.
  * @private
