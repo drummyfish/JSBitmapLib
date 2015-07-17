@@ -14,66 +14,66 @@
   <title>Editor</title>
   <style type="text/css" media="screen">
     body
-	  {
-	    padding: 15px 20px;
-	  }
+      {
+        padding: 15px 20px;
+      }
   
-	.ace_editor
-	  {
-		position: relative !important;
-		border: 1px solid lightgray;
-		width: 100%;
-	  }
-	
-	button
-	  {
-		clear: both;
-		dislpay: inline;
-	  }
-	  
-	#preview
-	  {
-		border: 1px solid rgb(170,170,170);
-		display: block;
-		margin-left: auto;
+    .ace_editor
+      {
+        position: relative !important;
+        border: 1px solid lightgray;
+        width: 100%;
+      }
+    
+    button
+      {
+        clear: both;
+        dislpay: inline;
+      }
+      
+    #preview
+      {
+        border: 1px solid rgb(170,170,170);
+        display: block;
+        margin-left: auto;
         margin-right: auto;
-		
-		-webkit-box-shadow: 3px 3px 35px -5px rgba(0,0,0,0.63);
+        
+        -webkit-box-shadow: 3px 3px 35px -5px rgba(0,0,0,0.63);
         -moz-box-shadow: 3px 3px 35px -5px rgba(0,0,0,0.63);
         box-shadow: 3px 3px 35px -5px rgba(0,0,0,0.63);
-	  }
-	  
-	#column_1
-	  {
-	    width: 40%;
-	  }
-	  
-	#main_table
-	  {
-	    width: 100%;
-	  }
-	  
-	#main_table td
-	  {
-	    padding: 10px;
-	    align: center;
-	  }
-	  
+      }
+      
+    #column_1
+      {
+        width: 40%;
+      }
+      
+    #main_table
+      {
+        width: 100%;
+      }
+      
+    #main_table td
+      {
+        padding: 10px;
+        align: center;
+      }
+      
     .inputWrapper
-	  { 
-	    float: left;
+      { 
+        float: left;
         height: 32px;
         width: 100px;
         overflow: hidden;
         position: relative;
-		margin: 5px 5px 0 0;
+        margin: 5px 5px 0 0;
         cursor: pointer;
         /*Using a background color, but you can use a background image to represent a button*/
         background-color: rgb(225,225,225);
       }
 
     .fileInput
-	  {
+      {
         cursor: pointer;
         height: 100%;
         position:absolute;
@@ -87,22 +87,22 @@
         -moz-opacity: 0;
         filter:progid:DXImageTransform.Microsoft.Alpha(opacity=0)
       }
-	  
-	p
-	  {
-	    margin: 7px 20px;
-		color: rgb(50,50,50);
-	  }
+      
+    p
+      {
+        margin: 7px 20px;
+        color: rgb(50,50,50);
+      }
     </style>
-	
+    
   <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
   <script>
     var editor;
-	var consoleEditor;
-	var preview;
-	var inputs;
+    var consoleEditor;
+    var preview;
+    var inputs;
   
     function resize()
       {
@@ -115,60 +115,60 @@
       };
   
     function consoleWrite(text)
-	  {
-		consoleEditor.insert(text + "\n");
+      {
+        consoleEditor.insert(text + "\n");
       }
   
     function consoleClear()
-	  {
-	    consoleEditor.setValue("");
-	  }
+      {
+        consoleEditor.setValue("");
+      }
   
     function runClicked()
-	  { 
-        inputs = loadImagesFromInputs([document.getElementById("input1"),document.getElementById("input2"),document.getElementById("input3")],run);
-	  }
+      { 
+        loadImagesFromInputs([document.getElementById("input1"),document.getElementById("input2"),document.getElementById("input3")],run);
+      }
   
-    function run()
-	  { 
-		try
-		  { 
+    function run(inputs)
+      { 
+        try
+          { 
             eval(editor.getValue()); 
-		  }
-		catch (e)
-		  {
-			var message = "";
-				  
-		    if (e.lineNumber)
-			  message += "line " + e.lineNumber.toString() + ", ";
-				  
-			if (e.message)
-			  message += e.message;
-				  
+          }
+        catch (e)
+          {
+            var message = "";
+                  
+            if (e.lineNumber)
+              message += "line " + e.lineNumber.toString() + ", ";
+                  
+            if (e.message)
+              message += e.message;
+                  
             consoleWrite("error: " + message);
-		  }
-	  }
-	
-	function displayHelp()
-	  {
-	    consoleWrite("--- JavaScript image processor, lib version 0.1 ---");
-	    consoleWrite("Miloslav 'tastyfish' Číž, 2015");
-	    consoleWrite("");
-		consoleWrite("This is a JavaScript programmable raster image processor.");
-		consoleWrite("Its goal isn't to be lightning-fast (if it was, it wouldn't");
-		consoleWrite("be written in JavaScript), although it tries to be");
-		consoleWrite("reasonably fast... the main goal is to be usable qucikly.");
-		consoleWrite("This editor uses its own pure-JavaScript library. Usage:");
-		consoleWrite("");
-		consoleWrite("  - Display image: image.drawToCanvas(preview).");
-		consoleWrite("  - Load image from file: use the input buttons below,");
-		consoleWrite("    then the image will be in inputs[0..2].");
-	    consoleWrite("  - Save the image: download button, or download() function");
-	    consoleWrite("    or downloadZip(image1, image2, ...) function. ");
-	    consoleWrite("  - Library reference: ");
+          }
+      }
+    
+    function displayHelp()
+      {
+        consoleWrite("--- JavaScript image processor, lib version 0.1 ---");
+        consoleWrite("Miloslav 'tastyfish' Číž, 2015");
+        consoleWrite("");
+        consoleWrite("This is a JavaScript programmable raster image processor.");
+        consoleWrite("Its goal isn't to be lightning-fast (if it was, it wouldn't");
+        consoleWrite("be written in JavaScript), although it tries to be");
+        consoleWrite("reasonably fast... the main goal is to be usable qucikly.");
+        consoleWrite("This editor uses its own pure-JavaScript library. Usage:");
+        consoleWrite("");
+        consoleWrite("  - Display image: image.drawToCanvas(preview).");
+        consoleWrite("  - Load image from file: use the input buttons below,");
+        consoleWrite("    then the image will be in inputs[0..2].");
+        consoleWrite("  - Save the image: download button, or download() function");
+        consoleWrite("    or downloadZip(image1, image2, ...) function. ");
+        consoleWrite("  - Library reference: ");
         consoleWrite("  - Other commands: consoleWrite(text), consoleClear().");
-		consoleWrite("-----------------------------------------------------------");
-	  }
+        consoleWrite("-----------------------------------------------------------");
+      }
     
     /**
      *  Downloads multiple images given as arguments in one zip file.
@@ -207,14 +207,14 @@
             });
       }
     
-	function onLoad()
-	  {
-	    preview = document.getElementById("preview");
+    function onLoad()
+      {
+        preview = document.getElementById("preview");
         preview.width = 256;
         preview.height = 256;        
         window.addEventListener("resize",resize);
         resize();
-	  }
+      }
   </script>
 </head>
 <body onload="onLoad()">
@@ -231,26 +231,26 @@
         <canvas id="preview"> </canvas>
       </td>
     </tr>
-	
+    
     <tr>
       <td>
         <button class="pure-button" onclick="runClicked()">run</button>
         <button class="pure-button" onclick="consoleClear()">clear</button>
         <button class="pure-button" onclick="displayHelp()">help</button>
         <button class="pure-button" onclick="download()">download</button>
-		<br />
-		<div class="inputWrapper">
-	      <p>input 1</p>
-	      <input class="fileInput" type="file" id="input1" />
-	    </div>
-	    <div class="inputWrapper">
-	      <p>input 2</p>
-	      <input class="fileInput" type="file" id="input2" />
-	    </div>
-	    <div class="inputWrapper">
-	      <p>input 3</p>
-	      <input class="fileInput" type="file" id="input3" />
-	    </div>
+        <br />
+        <div class="inputWrapper">
+          <p>input 1</p>
+          <input class="fileInput" type="file" id="input1" />
+        </div>
+        <div class="inputWrapper">
+          <p>input 2</p>
+          <input class="fileInput" type="file" id="input2" />
+        </div>
+        <div class="inputWrapper">
+          <p>input 3</p>
+          <input class="fileInput" type="file" id="input3" />
+        </div>
       </td>
     </tr>
 
@@ -263,16 +263,16 @@
     editor.setAutoScrollEditorIntoView(true);
     editor.setOption("maxLines", 25);
     editor.setOption("minLines", 25);
-	
-	consoleEditor = ace.edit("console");
+    
+    consoleEditor = ace.edit("console");
     consoleEditor.setTheme("ace/theme/chrome");
     consoleEditor.setAutoScrollEditorIntoView(true);
     consoleEditor.setOption("maxLines", 10);
     consoleEditor.setOption("minLines", 10);
-	consoleEditor.setReadOnly(true);
-	consoleEditor.setHighlightActiveLine(false);
-	consoleEditor.renderer.setShowGutter(false);
-	consoleEditor.setShowPrintMargin(false);
+    consoleEditor.setReadOnly(true);
+    consoleEditor.setHighlightActiveLine(false);
+    consoleEditor.renderer.setShowGutter(false);
+    consoleEditor.setShowPrintMargin(false);
 </script>
 
 </body>
