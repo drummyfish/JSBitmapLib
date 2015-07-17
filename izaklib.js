@@ -46,8 +46,8 @@ function saturate(value, minimum, maximum)
  *  @param inputs array of input elements, their images must be
  *    already set (inputs without selected images will return null)
  *  @param completedCallback a function that will be called once
- *    all images have been loaded, it should take one parameter
- *    that will contain an array of images that have been loaded
+ *    all images have been loaded, it should take one parameter -
+ *    an array of the loaded images
  */
 
 function loadImagesFromInputs(inputs, completedCallback)
@@ -60,7 +60,7 @@ function loadImagesFromInputs(inputs, completedCallback)
         counter--;
 
         if (counter == 0)
-          completedCallback();
+          completedCallback(result);
       };
 
     for (var i = 0; i < inputs.length; i++)
@@ -76,15 +76,30 @@ function loadImagesFromInputs(inputs, completedCallback)
 
             if (counter == 0)
               {
-                completedCallback();
-                return result;
+                completedCallback(result);
+                return;
               }
           }
       }
 
-    return result;
+    return;
   }
 
+/**
+ * The same as loadImagesFromInputs, but instead of html input
+ * elements expects string IDs of these elements.
+ */
+  
+function loadImagesFromInputsByIds(inputIds, completedCallback)
+  {
+    var inputs = [];
+    
+    for (i = 0; i < inputIds.length; i++)
+      inputs.push(document.getElementById(inputIds[i]));
+    
+    loadImagesFromInputs(inputs, completedCallback);
+  }
+  
 /**
  * Matrix class prototype, contains its functions and constants.
  */
@@ -1454,6 +1469,26 @@ imagePrototype =
         return result;
       },
 
+    /**
+     * Makes a stereogram out of given depthmap and pattern.
+     * The stereogram will overwrite content of this image.
+     * 
+     * @param depthmap depthmap image for the stereogram, its size
+     *   will be the stereogram size, the depthmap will be worked with
+     *   as a grayscale image
+     * @param pattern pattern image which should have a lot
+     *   of change in horizontal direction in order for the stereogram
+     *   to be readable, its size should also be much smaller than the
+     *   size of depthmap
+     * @param depth float value between 0 and 1 that can be used to
+     *   increase or decrease the depth effect
+     */
+      
+    stereogram: function(depthmap, pattern, depth)
+      {
+        
+      },
+      
     /**
     *  Performes either 2D DCT or IDCT.
     *  @private
