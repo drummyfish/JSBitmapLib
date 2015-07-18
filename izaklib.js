@@ -2,6 +2,19 @@
  * izak-lib
  * simple bitmap image manipulation library
  * Miloslav Číž
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -1136,6 +1149,16 @@ imagePrototype =
       },
       
     /**
+     * Same as drawToCanvas but the argument is the canvas
+     * string ID.
+     */
+      
+    drawToCanvasById: function(id)
+      {
+        this.drawToCanvas(document.getElementById(id));
+      },
+    
+    /**
     *  Creates a deep copy of the image.
     *
     *  @return new image that contains the same data and attributes as
@@ -1486,7 +1509,21 @@ imagePrototype =
       
     stereogram: function(depthmap, pattern, depth)
       {
+        var i, j, color;
         
+        if (depth === undefined) depth = 0.5;
+        
+        depth = saturate(depth,0.0,1.0);
+        
+        this.setSize(depthmap.getWidth(),depthmap.getHeight());
+        
+        for (j = 0; j < this.getHeight(); j++)
+          for (i = 0; i < this.getHeight(); i++)
+            {
+              color = pattern.getPixel(i % pattern.getWidth(),j % pattern.getHeight());
+              
+              this.setPixel(i,j,color[0],color[1],color[2]);
+            }
       },
       
     /**

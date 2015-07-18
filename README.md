@@ -31,6 +31,10 @@ A: Just download and include the izaklib.js file. You will want to look at Image
 
 A: Izák is a name of my cat. If you want something meaningful, it means Image Zero Agitation Kit.
 
+**Q: License?**
+
+A: GPL
+
 features
 --------
 * image class allowing per-pixel manipulation - done
