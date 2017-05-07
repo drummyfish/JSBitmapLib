@@ -69,4 +69,5 @@ features
 * geometric transformations (using matrices) - NOT done
 * warping - NOT done
 * simple text rendering - NOT done
+* pixel art upsampling algorithms - NOT done
 
